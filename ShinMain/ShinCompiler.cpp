@@ -1,11 +1,9 @@
 #include "stdafx.h"
 #include "ShinCompiler.h"
 #include <string>
-#include <vector>
 
 //Initializes source_highlevel
 ShinCompiler::ShinCompiler() {}
-
 ShinCompiler::~ShinCompiler() {}
 
 void ShinCompiler::addSourceFile(str sourceFile) {
@@ -27,55 +25,120 @@ void ShinCompiler::compileAllSources() {
 		AssemblyConstruction *assembly_item = 
 			getCompileSource(i);
 		
-		//Merge the source file and the solution 
-		assembly_file->data += assembly_item->data;
-		assembly_file->bss += assembly_item->bss;
-		assembly_file->text += assembly_item->text;
+		//Merge the compiled source and the solution 
+		assembly_file->addConstruction(assembly_item);
 
 		delete assembly_item;
 	}
 
-	compiled_machine_assembly = "";
+	//Turns assembly construction into a string
+	compiled_machine_assembly =
+		"section.data:\n" + assembly_file->data +
+		"\nsection.bss:\n" + assembly_file->bss +
+		"\nsection.text:\n" + assembly_file->text;
 	delete assembly_file;
 }
 
 ShinCompiler::AssemblyConstruction*
 ShinCompiler::getCompileSource(int index) {
 	//Source file string
-	str sourceFileString = highlevel_sources.at(index);
+	str source_file_string = highlevel_sources.at(index);
 
 	//Assembly construction for this source file
-	AssemblyConstruction *fileConstruction = new AssemblyConstruction();
+	AssemblyConstruction *file_construction;
 
-	//Line terms are the terms for every line in each evaluation
-	std::vector<str> lineTerms;
-	lineTerms.push_back(""); //Fill first vector
-	str currentWord = "";
-	//Loop through every char in the file
-	for (int i = 0; i < sourceFileString.length(); i++) {
-		str c = str(1, sourceFileString.at(i));
-		
-		//Convert the line to assembly
-		if (c == ";") {
-			//Do conversion
-			lineTerms.clear();
-		} 
-		//Add currentWord to a lineTerm if sep and the lineTerm has content
-		else if (c == " " && 
-					lineTerms.at(lineTerms.size()).length() > 0) {
-			lineTerms.push_back(currentWord);
-			lineTerms.push_back(""); //Create 
-			currentWord = "";
+
+	// These todos encompass the entire program :D
+	expression_list_ptr lex_vector = lexerSource(source_file_string);
+	file_construction = assembleByteCode(lex_vector);
+
+	//Free objects
+	for (int i = 0; i < lex_vector.size(); i++) {
+		delete lex_vector.at(i);
+	}
+
+	return file_construction;
+}
+
+//Lexer (source to vector of expressions)
+const std::string lexerExprTrailException = "Lexer Exception: Expression Trailing, no Terminator";
+expression_list_ptr ShinCompiler::lexerSource(str& source) {
+	//Expressions are our main method of lexerizing the high level code
+	expression_list_ptr expressions;
+
+	//These are temporary storages for a current word and expression
+	str word = "";
+	std::vector<str> wordExpr;
+
+	//First pass of lexer
+	for (int i = 0; i < source.length(); i++) {
+		wchar_t c = source.at(i); //Allows for unicode chars
+
+		//Automatic break and dump current word into the expression
+		if (c == langDef->delimiter) {
+			if (word != "") {
+				wordExpr.push_back(word);
+				word = "";
+			}
 		}
-		//Add to the current word if not a special character
+		//End the line, lexer the output 
+		else if (c == langDef->lineEnd) {
+			
+			// TODO : Lexer line into an expression and shove into expressions here
+			expressions.push_back(lineVecToExpr(wordExpr));
+
+			wordExpr.clear();
+		}
+		//Dump value into word if it isn't a special character
 		else {
-			currentWord += c;
+			word += c;
 		}
 	}
 
-	return fileConstruction;
+	//End processes
+
+	//Error checking for the current word expression
+	if (wordExpr.empty()) {
+		//Clean up
+		freeVector(&wordExpr);
+		//Throw unhandled excwprion
+		throw lexerExprTrailException;
+	}
+
+	freeVector(&wordExpr);
+
+	return expressions;
+};
+
+//Lexer helpers
+
+//Convert a simple str vector to an Expression via identification of metadata
+ShinCompiler::Expression *
+ShinCompiler::lineVecToExpr(std::vector<str>& lineVec) {
+	Expression * expr = new Expression();
+
+	expr->content = lineVec;
+	// TODO : Find line vector metadata (subj, verb, obj)
+
+	return expr;
+}
+
+//Assembler
+ShinCompiler::AssemblyConstruction *
+ShinCompiler::assembleByteCode(expression_list_ptr) {
+	AssemblyConstruction * assembled_code = new AssemblyConstruction();
+
+	// TODO : Convert to assembly here
+
+	return assembled_code;
 }
 
 str ShinCompiler::getCompiledAssembly() {
 	return compiled_machine_assembly;
+}
+
+//Custom function to murderize vectors (and get rid of all of their mem alloc)
+template <typename T> void freeVector(std::vector<T> * vec) {
+	vec->clear();
+	std::vector<T>().swap(vec);
 }
