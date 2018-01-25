@@ -2,7 +2,6 @@
 #include "ShinCompiler.h"
 #include <string>
 
-//Initializes source_highlevel
 ShinCompiler::ShinCompiler() {}
 ShinCompiler::~ShinCompiler() {}
 
@@ -47,8 +46,6 @@ ShinCompiler::getCompileSource(int index) {
 	//Assembly construction for this source file
 	AssemblyConstruction *file_construction;
 
-
-	// These todos encompass the entire program :D
 	expression_list_ptr lex_vector = lexerSource(source_file_string);
 	file_construction = assembleByteCode(lex_vector);
 
@@ -63,7 +60,7 @@ ShinCompiler::getCompileSource(int index) {
 //Lexer (source to vector of expressions)
 const std::string lexerExprTrailException = "Lexer Exception: Expression Trailing, no Terminator";
 expression_list_ptr ShinCompiler::lexerSource(str& source) {
-	//Expressions are our main method of lexerizing the high level code
+	//Expressions are our main method of storing the lexerized code
 	expression_list_ptr expressions;
 
 	//These are temporary storages for a current word and expression
